@@ -9,11 +9,7 @@ namespace shit
 {
     public class Server : IDisposable
     {
-        public int Port
-        {
-            get { return _port; }
-            private set { }
-        }
+        public int Port { get; private set; }
 
         #region Private Properties
 
@@ -97,42 +93,38 @@ namespace shit
         private Thread _serverThread;
         private string _rootDirectory;
         private HttpListener _listener;
-        private int _port;
 
         #endregion
 
         #region Constructors
 
-        public Server(string path, int port)
+        public Server(string path, int? port = null)
         {
-            Initialize(path, port);
-        }
+            if (port == null)
+            {
+                var l = new TcpListener(IPAddress.Loopback, 0);
+                l.Start();
+                port = ((IPEndPoint)l.LocalEndpoint).Port;
+                l.Stop();
+            }
 
-        public Server(string path)
-        {
-            var l = new TcpListener(IPAddress.Loopback, 0);
-            l.Start();
-            var port = ((IPEndPoint)l.LocalEndpoint).Port;
-            l.Stop();
-            Initialize(path, port);
-        }
-
-        #endregion
-
-        #region Interface Methods
-
-        public void Dispose()
-        {
-            _serverThread.Abort();
-            _listener.Stop();
+            Initialize(path, port.Value);
         }
 
         #endregion
+
+        private void Initialize(string path, int port)
+        {
+            _rootDirectory = path;
+            Port = port;
+            _serverThread = new Thread(Listen);
+            _serverThread.Start();
+        }
 
         private void Listen()
         {
             _listener = new HttpListener();
-            _listener.Prefixes.Add("http://*:" + _port + "/");
+            _listener.Prefixes.Add("http://*:" + Port + "/");
             _listener.Start();
             while (true)
             {
@@ -184,7 +176,10 @@ namespace shit
                     var buffer = new byte[1024 * 16];
                     int nbytes;
                     while ((nbytes = input.Read(buffer, 0, buffer.Length)) > 0)
+                    {
                         context.Response.OutputStream.Write(buffer, 0, nbytes);
+                    }
+
                     input.Close();
 
                     context.Response.StatusCode = (int)HttpStatusCode.OK;
@@ -194,7 +189,6 @@ namespace shit
                 {
                     context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                 }
-
             }
             else
             {
@@ -204,12 +198,14 @@ namespace shit
             context.Response.OutputStream.Close();
         }
 
-        private void Initialize(string path, int port)
+        #region Interface Methods
+
+        public void Dispose()
         {
-            _rootDirectory = path;
-            _port = port;
-            _serverThread = new Thread(Listen);
-            _serverThread.Start();
+            _serverThread.Abort();
+            _listener.Stop();
         }
+
+        #endregion
     }
 }
