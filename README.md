@@ -1,7 +1,7 @@
 # shit
 Simple Http, I Think?
 
-![demo](https://i.imgur.com/vhaaHE6.gif)
+![demo](./vhaaHE6.gif)
 
 Spin up a server wherever just by typing `shit` into your console.  Download the binary on the [releases](https://github.com/EricFreeman/shit/releases) page.
 
